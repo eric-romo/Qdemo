@@ -50,8 +50,6 @@ simulated event PostBeginPlay()
 
 event PlayerTick( float DeltaTime )
 {
-	//skeletal mesh debug
-	`log("skeletal mesh " $ pawn.Mesh.SkeletalMesh.Name);
 	
 	Leftposition_old = leftposition;
 	Rightposition_old = rightposition;
@@ -62,7 +60,7 @@ event PlayerTick( float DeltaTime )
 
 	//one time sixense calibration call.  Press both triggers and hold controllers straight out
 	if (!thesixense.calibrated && thesixense.TheControllerData.controller[0].trigger>0 && thesixense.TheControllerData.controller[1].trigger>0)
-		thesixense.Calibrate();
+	{thesixense.Calibrate();}
 
 	if (thesixense.calibrated ==true)
 		thesixense.ParseData();

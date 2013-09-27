@@ -3,12 +3,20 @@ class QPawn extends UTPawn
 	notplaceable;
 
 //testing hydra arm motion code - begin
-/*
+
 var QPlayerController ThePlayerController;
 var SkelControlSingleBone RightHand, LeftHand;
 var SkelControlLimb RightArm, LeftArm;
+var bool bmeshsetyet;
 //var float CamOffsetDistance;
 //var int IsoCamAngle;
+
+simulated function PostBeginPlay()
+{
+	Super.PostBeginPlay();
+	ThePlayerController = QPlayerController(GetALocalPlayerController());
+
+}
 
 simulated event PostInitAnimTree(SkeletalMeshComponent SkelComp)
 {
@@ -41,9 +49,14 @@ simulated event TickSpecial(float DeltaTime)
 	super.TickSpecial(DeltaTime);
 
 	JointDirection = vect(-50,0,-50);
+	
+	if (bmeshsetyet == false)
+		{setmeshvisibility(true);
+		bmeshsetyet = true;}
 
 	if(ThePlayerController.TheSixense.calibrated)
 	{
+		
 		TempRotation.Yaw = Rotation.Yaw;
 
 		RightHand.BoneRotation = QuatToRotator(ThePlayerController.TheSixense.altControllerData.Controller[1].Quat_rot) + TempRotation;
@@ -54,7 +67,7 @@ simulated event TickSpecial(float DeltaTime)
 
 		if(bIsCrouched) RightArmLocation.Z -= CrouchHeight * 0.5;
 		RightArm.EffectorLocation = RightArmLocation + Location;
-		Mesh.GetSocketWorldLocationAndRotation('WeaponPoint',SocketLocation);
+		Mesh.GetSocketWorldLocationAndRotation('WeaponSocket',SocketLocation);
 		RightArm.JointTargetLocation = TransformVectorByRotation(RightHand.BoneRotation, JointDirection) + SocketLocation;
 
 		if(bIsCrouched) LeftArmLocation.Z -= CrouchHeight * 0.5;
@@ -64,13 +77,16 @@ simulated event TickSpecial(float DeltaTime)
 	}
 }
 
-*/
+
 //end hydra arm motion code
 
 
 DefaultProperties
 {
-/*	bScriptTickSpecial = true
+	
+
+	
+	bScriptTickSpecial = true
 	
 	Begin Object Name=MyLightEnvironment
 		bSynthesizeSHLight=TRUE
@@ -83,19 +99,19 @@ DefaultProperties
 	
 	Components.Remove(WPawnSkeletalMeshComponent)
 	Begin Object Name=WPawnSkeletalMeshComponent
-		// To change pawn's mesh, go to HXFamilyInfo_PC
-		AnimTreeTemplate=AnimTree'CH_AnimHuman_Tree.HX_FreeArms_2'
+		AnimTreeTemplate=AnimTree'demo_asset.HX_FreeArms_2'
 		bCacheAnimSequenceNodes=FALSE
 		AlwaysLoadOnClient=true
 		AlwaysLoadOnServer=true
-		bOwnerNoSee=true
+	//	bOwnerNoSee=false
 		CastShadow=true
 		BlockRigidBody=TRUE
 		bUpdateSkelWhenNotRendered=false
 		bIgnoreControllersWhenNotRendered=TRUE
 		bUpdateKinematicBonesFromAnimation=true
 		bCastDynamicShadow=true
-		Translation=(Z=8.0)
+	//	Translation=(Z=0.0)
+		translation=(x=30.0)
 		RBChannel=RBCC_Untitled3
 		RBCollideWithChannels=(Untitled3=true)
 		LightEnvironment=MyLightEnvironment
@@ -107,7 +123,7 @@ DefaultProperties
 		bChartDistanceFactor=true
 		//bSkipAllUpdateWhenPhysicsAsleep=TRUE
 		RBDominanceGroup=20
-		Scale = 100.0
+		//Scale = 10.0 //was 100
 		// Scale=1.075
 		// Nice lighting for hair
 		bUseOnePassLightingOnTranslucency=TRUE
@@ -115,13 +131,15 @@ DefaultProperties
 	End Object
 	Mesh=WPawnSkeletalMeshComponent
 	Components.Add(WPawnSkeletalMeshComponent)
-	*/
+
+	drawscale=0.3
+
 	/*
 
 	Components.Remove(WPawnSkeletalMeshComponent)
 	Begin Object Class=SkeletalMeshComponent Name=HeadSkeletalMeshComponent 
-		SkeletalMesh=SkeletalMesh'PLAYERMODEL_VR.UT3_MALE_HEAD'
-		AnimTreeTemplate=AnimTree'CH_AnimHuman_Tree.HX_FreeArms_2'
+		SkeletalMesh=SkeletalMesh'demo_asset.UT3_MALE_HEAD_copy'
+		AnimTreeTemplate=AnimTree'demo_asset.HX_FreeArms_2'
 		PhysicsAsset=PhysicsAsset'CH_AnimCorrupt.Mesh.SK_CH_Corrupt_Male_Physics'
 		// PhysicsAsset=PhysicsAsset'PLAYERMODEL_VR.UT3_MALE_HEAD_Physics'
 		bCacheAnimSequenceNodes=FALSE
@@ -271,14 +289,15 @@ DefaultProperties
 
 	
 	
-	Begin Object Name=CollisionCylinder
+/*	Begin Object Name=CollisionCylinder
 		CollisionRadius=+001.000000
 		CollisionHeight=+044.000000
 	End Object
 	CylinderComponent=CollisionCylinder
-	
-	
-	baseeyeheight = 21;
+*/	
+
+	bmeshsetyet = false;
+	baseeyeheight = 27; // was21
 	JumpZ=0.0
 	//AccelRate=0.0
 

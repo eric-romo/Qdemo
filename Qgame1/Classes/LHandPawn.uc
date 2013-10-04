@@ -10,14 +10,13 @@ Simulated Event PostBeginPlay() {
 simulated function changecolor(bool colorchoice)
 	{
 
-		`log("enter change color material:" $ staticmeshcomponent.GetMaterial(0));
+	
 		if (colorchoice)
 		{staticmeshcomponent.SetMaterial(0,Material'ExampleMap_Resources.Translucent_Red');}
 
 		if (!colorchoice)
 		{staticmeshcomponent.SetMaterial(0,Material'demo_asset.Materials.test_mat2');}
 
-		`log("exit change color material:" $ staticmeshcomponent.GetMaterial(0));
 
 	}
 

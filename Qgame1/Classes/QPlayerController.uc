@@ -11,6 +11,7 @@ var vector leftx, lefty, leftz, L_objx, L_objy, L_objz, leftx_old, lefty_old, le
 var vector left_old_transpose_x, left_old_transpose_y, left_old_transpose_z;
 var vector rightx, righty, rightz, R_objx, R_objy, R_objz, rightx_old, righty_old, rightz_old, rightx_delta, righty_delta, rightz_delta, R_offsetx, R_offsety, R_offsetz;
 var vector right_old_transpose_x, right_old_transpose_y, right_old_transpose_z;
+var vector newpawnlocation;
 var float pos_scale, base_dist, base_height;
 var bool bwastouchingL, bwastouchingR, bfirstblockpressed, bjengapressed;
 var array<firstblockactor> firstblock;
@@ -51,6 +52,7 @@ simulated event PostBeginPlay()
 event PlayerTick( float DeltaTime )
 {
 	
+	
 	Leftposition_old = leftposition;
 	Rightposition_old = rightposition;
 	Leftorientation_old = leftorientation;
@@ -74,9 +76,17 @@ event PlayerTick( float DeltaTime )
 	LeftHand.setlocation(LeftPosition);  //was setlocation
 	
 	//position debug
-	`log("leftpos.z: " $ leftposition.Z);
+	
 	`log("pawn.z: " $ pawn.Location.Z);
-	`log("base height: " $ base_height);
+	`log("base eye height: " $ pawn.BaseEyeHeight);
+	
+
+	if (thesixense.TheControllerData.controller[1].buttons == 32)
+		thesixense.calibrated=false;
+
+	if (thesixense.TheControllerData.controller[1].buttons == 64)
+		bduck=1;
+
 
 	RightPosition.X=pawn.Location.X + base_dist - pos_scale * TheSixense.TheControllerData.controller[1].pos[2];
 	RightPosition.Y=pawn.Location.Y + pos_scale * TheSixense.TheControllerData.controller[1].pos[0];
@@ -319,12 +329,12 @@ function addfirstblocks()
 	if (bjengapressed == true)
 		removejengablocks();
 
-	for (k=0; k<=2; k++)
+	for (k=0; k<=3; k++)
 		for (i=0; i<=2; i++)
 			for (j=0; j<=2; j++)
 			{
-				spawnlocation.X = pawn.Location.X -250 + 75*(i+1);
-				spawnlocation.Y = pawn.Location.Y  + 50 + (j+1)*50;
+				spawnlocation.X = pawn.Location.X -150 + 75*(i+1);
+				spawnlocation.Y = pawn.Location.Y  + 75 + (j+1)*50;
 				spawnlocation.Z = pawn.Location.Z + 50*k;
 				if (randrange(0,1)>0.60)
 					{firstblock[blockindex] = spawn(class'firstblockactor',,,spawnlocation);
@@ -440,5 +450,6 @@ DefaultProperties
 	bwastouchingL = false;
 	bwastouchingR = false;
 	bfirstblockpressed = false;
+//	bduck=1; //crouched?
 
 }

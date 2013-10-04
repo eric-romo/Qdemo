@@ -20,7 +20,7 @@ DefaultInventory(0)=none //don't need a gun
 buseclassicHUD=true //get rid of the HUD
 HUDType=none //get rid of the HUD
 
-PlayerReplicationInfoClass=class'QPlayerReplicationInfo'
+//PlayerReplicationInfoClass=class'QPlayerReplicationInfo'
 DefaultPawnClass=class'QPawn' //set custom pawn class 
 PlayerControllerClass=class'QPlayerController'
 

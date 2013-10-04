@@ -5,4 +5,5 @@ DefaultProperties
 
 	charactermesh=SkeletalMesh'demo_asset.UT3_MALE_BASE_copy'
 
+
 }

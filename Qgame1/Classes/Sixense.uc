@@ -127,7 +127,7 @@ function ParseSixense(int SC)
 {
 	local float ArmMultiplier;
 	
-	ArmMultiplier = 0.5; // How much to multiply the sixense vectors by (was0.065)
+	ArmMultiplier = 0.065; // How much to multiply the sixense vectors by (was0.065)
 
 	altControllerData.Controller[SC].vector_Pos.X = -TheControllerData.Controller[SC].pos[2];
 	altControllerData.Controller[SC].vector_Pos.Y = TheControllerData.Controller[SC].pos[0];

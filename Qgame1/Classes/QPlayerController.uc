@@ -16,7 +16,10 @@ var float pos_scale, base_dist, base_height;
 var bool bwastouchingL, bwastouchingR, bfirstblockpressed, bjengapressed;
 var array<firstblockactor> firstblock;
 var array<jengaactor> jengablock;
-
+var texturemovie movie_texture_var; //used to control play and pause for moive texture
+var int slideindex_column, slideindex_row, slideindex;
+var bool bslideadvancing;
+var textureflipbook slides_texture_var;
 
 `define m33el(x, y) `y + `x * 3
 
@@ -45,7 +48,8 @@ simulated event PostBeginPlay()
 
 	RightHand = spawn(class'LHandPawn',,,spawnlocation); //cleaner way to do this?  spawnlocation is hard coded...
 
-	
+	movie_texture_var.Pause(); //sets movie as initially paused
+	slides_texture_var.SetCurrentFrame(slideindex_row, slideindex_column); //set to slide 1
 }
 
 
@@ -59,10 +63,13 @@ event PlayerTick( float DeltaTime )
 	Rightorientation_old = rightorientation;
 
 	TheSixense.sixenseGetAllNewestData(TheSixense.TheControllerData);
+	
+	if (thesixense.TheControllerData.controller[1].buttons == 8)
+		thesixense.Calibrate();
 
-	//one time sixense calibration call.  Press both triggers and hold controllers straight out
-	if (!thesixense.calibrated && thesixense.TheControllerData.controller[0].trigger>0 && thesixense.TheControllerData.controller[1].trigger>0)
-	{thesixense.Calibrate();}
+	if (thesixense.TheControllerData.controller[1].buttons == 16)
+		thesixense.calibrated = false;
+
 
 	if (thesixense.calibrated ==true)
 		thesixense.ParseData();
@@ -80,14 +87,6 @@ event PlayerTick( float DeltaTime )
 	`log("pawn.z: " $ pawn.Location.Z);
 	`log("base eye height: " $ pawn.BaseEyeHeight);
 	
-
-	if (thesixense.TheControllerData.controller[1].buttons == 32)
-		thesixense.calibrated=false;
-
-	if (thesixense.TheControllerData.controller[1].buttons == 64)
-		bduck=1;
-
-
 	RightPosition.X=pawn.Location.X + base_dist - pos_scale * TheSixense.TheControllerData.controller[1].pos[2];
 	RightPosition.Y=pawn.Location.Y + pos_scale * TheSixense.TheControllerData.controller[1].pos[0];
 	//RightPosition.Z=Pawn.Location.Z + base_height + pos_scale * TheSixense.TheControllerData.controller[1].pos[1];
@@ -288,10 +287,9 @@ event PlayerTick( float DeltaTime )
 
 	if (thesixense.TheControllerData.controller[0].buttons == 16)
 		removejengablocks();
-
-
 //end object creation and destruction
 
+	
 
 	if ( !bShortConnectTimeOut )
 	{
@@ -320,7 +318,7 @@ event PlayerTick( float DeltaTime )
 	AdjustFOV(DeltaTime);
 }
 
-function addfirstblocks()
+exec function addfirstblocks()
 {
 	local int i, j, k, blockindex;
 	
@@ -349,7 +347,7 @@ function addfirstblocks()
 	bfirstblockpressed = true;
 }
 
-function removefirstblocks()
+exec function removefirstblocks()
 {
     local int destroyindex;
 	
@@ -409,6 +407,48 @@ function removejengablocks()
 			bjengapressed = false;
 }
 
+exec function slideadvance()
+{
+		slideindex = slideindex + 1;
+		if (slideindex == 1)
+		{slideindex_row = 0;
+		 slideindex_column = 0;}
+		
+		if (slideindex == 2)
+		{slideindex_row = 0;
+		 slideindex_column = 1;}
+
+		 if (slideindex == 3)
+		 {slideindex_row = 1;
+		 slideindex_column = 0;}
+
+		 if (slideindex ==4)
+		 {slideindex_row = 1;
+		 slideindex_column = 1;}
+		
+		slides_texture_var.SetCurrentFrame(slideindex_row, slideindex_column);
+	//	bslideadvancing=false;
+}
+
+exec function slideback()
+{
+	slideindex = slideindex-2;
+	slideadvance();
+}
+
+//control movie - initially paused in postbeginplay()
+exec function movie_pause()
+{   movie_texture_var.Pause();}
+
+exec function movie_play()
+{   movie_texture_var.Play();}
+
+exec function reset_sixense_cal()
+{   thesixense.calibrated=false;}
+
+exec function call_sixense_cal()
+{   thesixense.Calibrate();}
+
 function vector resultx (vector Ax, vector Ay, vector Az, vector Bx)
 {
 	local vector result_temp;
@@ -451,5 +491,13 @@ DefaultProperties
 	bwastouchingR = false;
 	bfirstblockpressed = false;
 //	bduck=1; //crouched?
+
+	movie_texture_var = TextureMovie'demo_asset.Wildlifemovie';
+	slides_texture_var = TextureFlipBook'demo_asset.slideshow1';	
+
+	slideindex_row=0;
+	slideindex_column=0;
+	slideindex=1;
+	bslideadvancing=false;
 
 }

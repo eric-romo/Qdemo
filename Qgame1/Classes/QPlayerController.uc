@@ -2,6 +2,7 @@ class QPlayerController extends UTPlayerController;
 
 var LHandPawn LeftHand, RightHand;
 var vector SpawnLocation;
+var rotator spawnrotation;
 var vector LeftPosition, RightPosition,  Leftposition_old, Rightposition_old, leftposition_delta, rightposition_delta;
 var rotator LeftOrientation, RightOrientation, LeftOrientation_old, RightOrientation_old, leftorientation_delta, rightorientation_delta;
 var rotator leftorientation_delta_world, rightorientation_delta_world;
@@ -12,14 +13,17 @@ var vector left_old_transpose_x, left_old_transpose_y, left_old_transpose_z;
 var vector rightx, righty, rightz, R_objx, R_objy, R_objz, rightx_old, righty_old, rightz_old, rightx_delta, righty_delta, rightz_delta, R_offsetx, R_offsety, R_offsetz;
 var vector right_old_transpose_x, right_old_transpose_y, right_old_transpose_z;
 var vector newpawnlocation;
-var float pos_scale, base_dist, base_height;
-var bool bwastouchingL, bwastouchingR, bfirstblockpressed, bjengapressed;
+var float pos_scale, base_height;
+var vector base_dist;
+var bool bwastouchingL, bwastouchingR, bfirstblockpressed, bjengapressed, bmirror_spawned, bvideo_spawned, bpresentation_spawned;
 var array<firstblockactor> firstblock;
 var array<jengaactor> jengablock;
-var texturemovie movie_texture_var; //used to control play and pause for moive texture
+var texturemovie movie_texture_var; //used to control play and pause for movie texture
 var int slideindex_column, slideindex_row, slideindex;
-var bool bslideadvancing;
 var textureflipbook slides_texture_var;
+var mirroractor themirror;
+var videoactor thevideo;
+var presentationactor thepresentation;
 
 `define m33el(x, y) `y + `x * 3
 
@@ -50,6 +54,7 @@ simulated event PostBeginPlay()
 
 	movie_texture_var.Pause(); //sets movie as initially paused
 	slides_texture_var.SetCurrentFrame(slideindex_row, slideindex_column); //set to slide 1
+	base_dist.X = 600;
 }
 
 
@@ -65,7 +70,10 @@ event PlayerTick( float DeltaTime )
 	TheSixense.sixenseGetAllNewestData(TheSixense.TheControllerData);
 	
 	if (thesixense.TheControllerData.controller[1].buttons == 8)
-		thesixense.Calibrate();
+	{thesixense.Calibrate();
+	base_dist.x = -thesixense.origin.X;
+	base_dist.Y = thesixense.origin.Y;
+	}
 
 	if (thesixense.TheControllerData.controller[1].buttons == 16)
 		thesixense.calibrated = false;
@@ -76,20 +84,18 @@ event PlayerTick( float DeltaTime )
 
 	//begin sixense position and orientation
 	//position - need to work on scaling...
-	LeftPosition.X=pawn.Location.X + base_dist - pos_scale * TheSixense.TheControllerData.controller[0].pos[2];
-	LeftPosition.Y=pawn.Location.Y + pos_scale * TheSixense.TheControllerData.controller[0].pos[0];
-	//LeftPosition.Z=Pawn.Location.Z + base_height + pos_scale * TheSixense.TheControllerData.controller[0].pos[1];
+	LeftPosition.X=pawn.Location.X + pos_scale * (base_dist.X - TheSixense.TheControllerData.controller[0].pos[2]);
+	LeftPosition.Y=pawn.Location.Y + pos_scale * (TheSixense.TheControllerData.controller[0].pos[0] - base_dist.Y);
 	LeftPosition.Z=base_height + pos_scale * TheSixense.TheControllerData.controller[0].pos[1];
-	LeftHand.setlocation(LeftPosition);  //was setlocation
+	LeftHand.setlocation(LeftPosition);  
 	
 	//position debug
 	
 	`log("pawn.z: " $ pawn.Location.Z);
 	`log("base eye height: " $ pawn.BaseEyeHeight);
 	
-	RightPosition.X=pawn.Location.X + base_dist - pos_scale * TheSixense.TheControllerData.controller[1].pos[2];
-	RightPosition.Y=pawn.Location.Y + pos_scale * TheSixense.TheControllerData.controller[1].pos[0];
-	//RightPosition.Z=Pawn.Location.Z + base_height + pos_scale * TheSixense.TheControllerData.controller[1].pos[1];
+	RightPosition.X=pawn.Location.X + pos_scale * (base_dist.X -  TheSixense.TheControllerData.controller[1].pos[2]);
+	RightPosition.Y=pawn.Location.Y + pos_scale * (TheSixense.TheControllerData.controller[1].pos[0] - base_dist.Y);
 	RightPosition.Z=base_height + pos_scale * TheSixense.TheControllerData.controller[1].pos[1];
 	RightHand.setlocation(RightPosition);
 
@@ -339,10 +345,10 @@ exec function addfirstblocks()
 					blockindex++;
 					}
 			}
-	if (bfirstblockpressed == false)
+/*	if (bfirstblockpressed == false)
 	{pos_scale = 2*pos_scale;
-	base_dist = 1.5* base_dist;}
-
+	base_dist.x = 1.5* base_dist.X;}
+*/
 
 	bfirstblockpressed = true;
 }
@@ -354,10 +360,10 @@ exec function removefirstblocks()
 	for (destroyindex = 0; destroyindex <=firstblock.Length; destroyindex++) 
 			{firstblock[destroyindex].Destroy();}
 	
-	if (bfirstblockpressed ==true)
+	/*if (bfirstblockpressed ==true)
 	{pos_scale = pos_scale/2;
-		base_dist = base_dist/1.5;}
-			
+		base_dist.x = base_dist.X/1.5;}
+	*/		
 	bfirstblockpressed = false;
 	
 }
@@ -427,7 +433,6 @@ exec function slideadvance()
 		 slideindex_column = 1;}
 		
 		slides_texture_var.SetCurrentFrame(slideindex_row, slideindex_column);
-	//	bslideadvancing=false;
 }
 
 exec function slideback()
@@ -447,7 +452,66 @@ exec function reset_sixense_cal()
 {   thesixense.calibrated=false;}
 
 exec function call_sixense_cal()
-{   thesixense.Calibrate();}
+{   thesixense.Calibrate();
+	base_dist.x = -thesixense.origin.X;
+	base_dist.Y = thesixense.origin.Y;}
+
+exec function spawn_mirror()
+{
+	spawnlocation.X = pawn.Location.X +50;
+	spawnlocation.Y = pawn.Location.Y - 125;
+	spawnlocation.Z = pawn.Location.Z - 25;
+
+	spawnrotation.yaw = 0;
+	
+	if (bmirror_spawned)
+	{	themirror.Destroy();
+		bmirror_spawned = false;}
+	else
+	{   themirror = spawn(class'mirroractor',,,spawnlocation,spawnrotation);
+		bmirror_spawned = true;}
+
+
+}
+
+exec function spawn_video()
+{
+	spawnlocation.X = pawn.Location.X - 100;
+	spawnlocation.Y = pawn.Location.Y + 275;
+	spawnlocation.Z = pawn.Location.Z - 25;
+
+	spawnrotation.yaw = 32000;
+	//spawnrotation.pitch = 16000;
+	
+	if (bvideo_spawned)
+	{	thevideo.Destroy();
+		bvideo_spawned = false;}
+	else
+	{   thevideo = spawn(class'videoactor',,,spawnlocation,spawnrotation);
+		bvideo_spawned = true;}
+
+
+}
+
+exec function spawn_presentation()
+
+{
+	spawnlocation.X = pawn.Location.X + 150;
+	spawnlocation.Y = pawn.Location.Y -125;
+	spawnlocation.Z = pawn.Location.Z;
+
+	spawnrotation.yaw = 8000;
+	//spawnrotation.pitch = 16000;
+	
+	if (bpresentation_spawned)
+	{	thepresentation.Destroy();
+		bpresentation_spawned = false;}
+	else
+	{   thepresentation = spawn(class'presentationactor',,,spawnlocation,spawnrotation);
+		bpresentation_spawned = true;}
+
+
+}
 
 function vector resultx (vector Ax, vector Ay, vector Az, vector Bx)
 {
@@ -484,12 +548,14 @@ function vector resultz (vector Ax, vector Ay, vector Az, vector Bz)
 
 DefaultProperties
 {
-	pos_scale = 0.14;
-	base_dist = 100;
+	pos_scale = 0.25;
 	base_height = 60;
 	bwastouchingL = false;
 	bwastouchingR = false;
 	bfirstblockpressed = false;
+	bmirror_spawned = false;
+	bvideo_spawned = false;
+	bpresentation_spawned = false;
 //	bduck=1; //crouched?
 
 	movie_texture_var = TextureMovie'demo_asset.Wildlifemovie';
@@ -498,6 +564,6 @@ DefaultProperties
 	slideindex_row=0;
 	slideindex_column=0;
 	slideindex=1;
-	bslideadvancing=false;
+
 
 }

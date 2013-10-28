@@ -134,11 +134,15 @@ function ParseSixense(int SC)
 	altControllerData.Controller[SC].vector_Pos.Z = TheControllerData.Controller[SC].pos[1];
 	altControllerData.Controller[SC].vector_Pos = (altControllerData.Controller[SC].vector_Pos - origin) * ArmMultiplier;
 
+
 	altControllerData.Controller[SC].Quat_rot.W = -TheControllerData.Controller[SC].rot_quat[3];
 	altControllerData.Controller[SC].Quat_rot.X = -TheControllerData.Controller[SC].rot_quat[2];
 	altControllerData.Controller[SC].Quat_rot.Y = TheControllerData.Controller[SC].rot_quat[0];
 	altControllerData.Controller[SC].Quat_rot.Z = TheControllerData.Controller[SC].rot_quat[1];
+
+
 }
+
 	
 DefaultProperties
 {

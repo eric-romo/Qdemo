@@ -5,18 +5,16 @@ class QPawn extends UTPawn
 //testing hydra arm motion code - begin
 
 var QPlayerController ThePlayerController;
-var SkelControlSingleBone RightHand, LeftHand;
+var SkelControlSingleBone RightHand, LeftHand, head;
 var SkelControlLimb RightArm, LeftArm;
-var bool bmeshsetyet;
-//var float CamOffsetDistance;
-//var int IsoCamAngle;
+//var bool bmeshsetyet;
+
 
 simulated function PostBeginPlay()
 {
 	Super.PostBeginPlay();
 	ThePlayerController = QPlayerController(GetALocalPlayerController());
 
-	//code to fix flying pawn?
 	if (!bDeleteMe)
 	{
 		if (Mesh != None)
@@ -39,51 +37,36 @@ simulated event PostInitAnimTree(SkeletalMeshComponent SkelComp)
 
 	RightHand = SkelControlSingleBone(mesh.FindSkelControl('RightHand'));
 	LeftHand = SkelControlSingleBone(mesh.FindSkelControl('LeftHand'));
-/*	existing code for arm control
- *	
- *  RightArm = SkelControlLimb(mesh.FindSkelControl('RightArm'));
-	LeftArm = SkelControlLimb(mesh.FindSkelControl('LeftArm'));
-*/
+	head = skelcontrolsinglebone(mesh.FindSkelControl('HeadControl'));
 
-/*	LeftLegControl = SkelControlFootPlacement(Mesh.FindSkelControl(LeftFootControlName));
-	RightLegControl = SkelControlFootPlacement(Mesh.FindSkelControl(RightFootControlName));
-	FeignDeathBlend = AnimNodeBlend(Mesh.FindAnimNode('FeignDeathBlend'));
-	FullBodyAnimSlot = AnimNodeSlot(Mesh.FindAnimNode('FullBodySlot'));
-	TopHalfAnimSlot = AnimNodeSlot(Mesh.FindAnimNode('TopHalfSlot'));
-	RootRotControl = SkelControlSingleBone( mesh.FindSkelControl('RootRot') );
-	AimNode = AnimNodeAimOffset( mesh.FindAnimNode('AimNode') );
-	GunRecoilNode = GameSkelCtrl_Recoil( mesh.FindSkelControl('GunRecoilNode') );
-	LeftRecoilNode = GameSkelCtrl_Recoil( mesh.FindSkelControl('LeftRecoilNode') );
-	RightRecoilNode = GameSkelCtrl_Recoil( mesh.FindSkelControl('RightRecoilNode') );
-	DrivingNode = UTAnimBlendByDriving( mesh.FindAnimNode('DrivingNode') );
-	VehicleNode = UTAnimBlendByVehicle( mesh.FindAnimNode('VehicleNode') );
-	HoverboardingNode = UTAnimBlendByHoverboarding( mesh.FindAnimNode('Hoverboarding') );
-	FlyingDirOffset = AnimNodeAimOffset( mesh.FindAnimNode('FlyingDirOffset') );*/
 }
 
 
 simulated event TickSpecial(float DeltaTime)
 {
-	local rotator TempRotation;
-	local vector RightArmLocation, LeftArmLocation, SocketLocation, JointDirection;
+	//local rotator TempRotation;
+	local rotator headrotation;
+	local vector RightArmLocation, LeftArmLocation, SocketLocation, JointDirection, headposition;
 	super.TickSpecial(DeltaTime);
 
 	JointDirection = vect(-50,0,-50);
 	
-	if (bmeshsetyet == false)
+	/*if (bmeshsetyet == false) //was used to make mesh visible to player - don't want this feature
 		{setmeshvisibility(true);
-		bmeshsetyet = true;}
+		bmeshsetyet = true;}*/
+
 
 	if(ThePlayerController.TheSixense.calibrated)
 	{
 		
-		TempRotation.Yaw = Rotation.Yaw;
+		//TempRotation.Yaw = Rotation.Yaw;
 
-		RightHand.BoneRotation = QuatToRotator(ThePlayerController.TheSixense.altControllerData.Controller[1].Quat_rot) + TempRotation;
-		LeftHand.BoneRotation = QuatToRotator(ThePlayerController.TheSixense.altControllerData.Controller[0].Quat_rot) + TempRotation;
+		RightHand.BoneRotation = QuatToRotator(ThePlayerController.TheSixense.altControllerData.Controller[1].Quat_rot);// + TempRotation;
+		LeftHand.BoneRotation = QuatToRotator(ThePlayerController.TheSixense.altControllerData.Controller[0].Quat_rot);// + TempRotation;
+		lefthand.BoneRotation.Roll = lefthand.BoneRotation.Roll + 32750;  //left hand axes are rotated 180deg
 
-		RightArmLocation = ThePlayerController.TheSixense.altControllerData.Controller[1].vector_Pos >> TempRotation;
-		LeftArmLocation = ThePlayerController.TheSixense.altControllerData.Controller[0].vector_Pos >> TempRotation;
+		RightArmLocation = ThePlayerController.TheSixense.altControllerData.Controller[1].vector_Pos;// >> TempRotation;
+		LeftArmLocation = ThePlayerController.TheSixense.altControllerData.Controller[0].vector_Pos;// >> TempRotation;
 
 		if(bIsCrouched) RightArmLocation.Z -= CrouchHeight * 0.5;
 		RightArm.EffectorLocation = RightArmLocation + Location;
@@ -95,8 +78,11 @@ simulated event TickSpecial(float DeltaTime)
 		Mesh.GetSocketWorldLocationAndRotation('DualWeaponPoint',SocketLocation);
 		LeftArm.JointTargetLocation = TransformVectorByRotation(LeftHand.BoneRotation, JointDirection) + SocketLocation;
 	
-	}
+		
 
+	}
+		theplayercontroller.GetPlayerViewPoint(headposition,headrotation);
+		head.BoneRotation = headrotation - Rotation;
 
 }
 
@@ -122,19 +108,16 @@ DefaultProperties
 	
 	Components.Remove(WPawnSkeletalMeshComponent)
 	Begin Object Name=WPawnSkeletalMeshComponent
-		AnimTreeTemplate=AnimTree'demo_asset.HX_FreeArms_3'  //_2 is the default
+		AnimTreeTemplate=AnimTree'demo_asset.HX_FreeArms_3'  
 		bCacheAnimSequenceNodes=FALSE
 		AlwaysLoadOnClient=true
 		AlwaysLoadOnServer=true
-	//	bOwnerNoSee=false
 		CastShadow=true
 		BlockRigidBody=TRUE
 		bUpdateSkelWhenNotRendered=true
-		bIgnoreControllersWhenNotRendered=TRUE
+		bIgnoreControllersWhenNotRendered=false //was true
 		bUpdateKinematicBonesFromAnimation=true
 		bCastDynamicShadow=true
-	//	Translation=(Z=-50.0)
-	//	translation=(x=30.0)
 		RBChannel=RBCC_Untitled3
 		RBCollideWithChannels=(Untitled3=true)
 		LightEnvironment=MyLightEnvironment
@@ -146,10 +129,6 @@ DefaultProperties
 		bChartDistanceFactor=true
 		//bSkipAllUpdateWhenPhysicsAsleep=TRUE
 		RBDominanceGroup=20
-	//	Scale3D=(X=0.50,Y=0.50,Z=0.50)
-		//Scale = 10.0 //was 100
-		// Scale=1.075
-		// Nice lighting for hair
 		bUseOnePassLightingOnTranslucency=TRUE
 		bPerBoneMotionBlur=true
 	End Object
@@ -164,7 +143,7 @@ DefaultProperties
 	CylinderComponent=CollisionCylinder
 	
 
-	bmeshsetyet = false;
+	//bmeshsetyet = false;
 	baseeyeheight = 27; // was21...want to net ~27, but accomodating for crouch
 	CrouchHeight=45.0
 	JumpZ=0.0

@@ -5,7 +5,7 @@ DefaultProperties
 
 	familyid="Player"
 
-	charactermesh=SkeletalMesh'demo_asset.Rig_sean2'
+	charactermesh=SkeletalMesh'CH_IronGuard_Male.Mesh.SK_CH_IronGuard_MaleA'
 
 
 }

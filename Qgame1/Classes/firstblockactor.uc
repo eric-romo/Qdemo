@@ -1,10 +1,6 @@
 class firstblockactor extends kactorspawnable;
 
-/*event untouch(actor other)
-{
-	super.untouch(other);
-	other.SetPhysics(PHYS_rigidbody);
-}*/
+
 
 DefaultProperties
 {

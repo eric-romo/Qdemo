@@ -3,6 +3,8 @@ Qdemo
 
 Qualia3D demo in UDK
 
+Using UDK version from Oculus Developer site (https://developer.oculusvr.com/?action=dl)
+
 All files go in UDK install directory (e.g. c:\udk\udk-2013-09\...) in the following locations
 
 - Files in Config go in \UDKGame\Config

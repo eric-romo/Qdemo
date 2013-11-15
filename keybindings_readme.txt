@@ -11,6 +11,7 @@ T: reset Sixense calibration
 M: spawn/unspawn mirror to left
 V: spawn/unspawn video
 P: spawn/unspawn presentation
+O: spawn/unspawn whiteboard
 
 Right controller 3: calibrate sixense
 Right controller 4: uncalibrate

@@ -116,11 +116,11 @@ function Calibrate()
 
 function ParseData()
 {
-	if(calibrated)
-	{
+//	if(calibrated)
+//	{
 		ParseSixense(0); //left
 		ParseSixense(1); //right
-	}
+//	}
 }
 
 function ParseSixense(int SC)

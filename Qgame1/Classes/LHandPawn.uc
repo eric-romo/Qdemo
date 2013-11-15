@@ -16,14 +16,16 @@ simulated function changecolor(bool colorchoice)
 
 		if (!colorchoice)
 		{staticmeshcomponent.SetMaterial(0,Material'demo_asset.Materials.test_mat2');}
-
+	
 
 	}
+
 
 event untouch(actor other)
 {
 	super.untouch(other);
-	other.SetPhysics(PHYS_rigidbody);
+	if (other.Class != class'whiteboardactor')
+		other.SetPhysics(PHYS_rigidbody);
 }
 
 defaultproperties

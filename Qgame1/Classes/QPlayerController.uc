@@ -15,7 +15,7 @@ var vector right_old_transpose_x, right_old_transpose_y, right_old_transpose_z;
 var vector newpawnlocation;
 var float pos_scale, base_height;
 var vector base_dist;
-var bool bwastouchingL, bwastouchingR, bfirstblockpressed, bjengapressed, bmirror_spawned, bvideo_spawned, bpresentation_spawned;
+var bool bwastouchingL, bwastouchingR, bfirstblockpressed, bjengapressed, bmirror_spawned, bvideo_spawned, bpresentation_spawned, bwhiteboard_spawned;
 var array<firstblockactor> firstblock;
 var array<jengaactor> jengablock;
 var texturemovie movie_texture_var; //used to control play and pause for movie texture
@@ -24,12 +24,19 @@ var textureflipbook slides_texture_var;
 var mirroractor themirror;
 var videoactor thevideo;
 var presentationactor thepresentation;
+var whiteboardactor thewhiteboard;
+var int whiteboard_count, whiteboard_trigger;
+var int which_player;  //asssumed two players starting on opposite sides of table
+var bool bplayerchecked;
 
 `define m33el(x, y) `y + `x * 3
 
 
+
 simulated event PostBeginPlay()
 {	
+	
+
 	super.PostBeginPlay();
 	
 	
@@ -55,13 +62,26 @@ simulated event PostBeginPlay()
 	movie_texture_var.Pause(); //sets movie as initially paused
 	slides_texture_var.SetCurrentFrame(slideindex_row, slideindex_column); //set to slide 1
 	base_dist.X = 600;
+
+
+	
 }
 
 
 event PlayerTick( float DeltaTime )
 {
 	
+
+	if (pawn != none && !bplayerchecked)
+		if (pawn.Rotation.Yaw !=0)
+		{which_player = 1;
+		bplayerchecked = true;}
+		else
+		{ bplayerchecked = true;
+		}
 	
+	`log("Which player? " $ which_player);
+
 	Leftposition_old = leftposition;
 	Rightposition_old = rightposition;
 	Leftorientation_old = leftorientation;
@@ -84,8 +104,17 @@ event PlayerTick( float DeltaTime )
 
 	//begin sixense position and orientation
 	//position - need to work on scaling...
+	if (which_player ==0)
+	{
 	LeftPosition.X=pawn.Location.X + pos_scale * (base_dist.X - TheSixense.TheControllerData.controller[0].pos[2]);
 	LeftPosition.Y=pawn.Location.Y + pos_scale * (TheSixense.TheControllerData.controller[0].pos[0] - base_dist.Y);
+	}
+	else
+	{
+	LeftPosition.X=pawn.Location.X - pos_scale * (base_dist.X - TheSixense.TheControllerData.controller[0].pos[2]);
+	LeftPosition.Y=pawn.Location.Y - pos_scale * (TheSixense.TheControllerData.controller[0].pos[0] - base_dist.Y);
+	}
+
 	LeftPosition.Z=base_height + pos_scale * TheSixense.TheControllerData.controller[0].pos[1];
 	LeftHand.setlocation(LeftPosition);  
 	
@@ -94,8 +123,16 @@ event PlayerTick( float DeltaTime )
 	`log("pawn.z: " $ pawn.Location.Z);
 	`log("base eye height: " $ pawn.BaseEyeHeight);
 	
-	RightPosition.X=pawn.Location.X + pos_scale * (base_dist.X -  TheSixense.TheControllerData.controller[1].pos[2]);
-	RightPosition.Y=pawn.Location.Y + pos_scale * (TheSixense.TheControllerData.controller[1].pos[0] - base_dist.Y);
+	if (which_player == 0)
+	{   RightPosition.X=pawn.Location.X + pos_scale * (base_dist.X -  TheSixense.TheControllerData.controller[1].pos[2]);
+		RightPosition.Y=pawn.Location.Y + pos_scale * (TheSixense.TheControllerData.controller[1].pos[0] - base_dist.Y);
+	}
+	else 
+	{   RightPosition.X=pawn.Location.X - pos_scale * (base_dist.X -  TheSixense.TheControllerData.controller[1].pos[2]);
+		RightPosition.Y=pawn.Location.Y - pos_scale * (TheSixense.TheControllerData.controller[1].pos[0] - base_dist.Y);
+	}
+	
+	
 	RightPosition.Z=base_height + pos_scale * TheSixense.TheControllerData.controller[1].pos[1];
 	RightHand.setlocation(RightPosition);
 
@@ -129,6 +166,10 @@ event PlayerTick( float DeltaTime )
 	sxMat.WPlane.W = 1;
 
 	leftorientation = matrixgetrotator(sxMat);
+	
+	if (which_player == 1)
+	{leftorientation.Roll = -leftorientation.roll;
+	leftorientation.Pitch = -leftorientation.Pitch;}
 
 	LeftHand.SetRotation(LeftOrientation);
 
@@ -157,6 +198,10 @@ event PlayerTick( float DeltaTime )
 	sxMat.WPlane.W = 1;
 
 	rightorientation = matrixgetrotator(sxMat);
+
+	if (which_player == 1)
+	{rightorientation.Roll = -rightorientation.roll;
+	rightorientation.Pitch = -rightorientation.Pitch;}
 
 	RightHand.SetRotation(RightOrientation);
 //end sixense position and orientation	
@@ -196,34 +241,35 @@ event PlayerTick( float DeltaTime )
 	{`log("TOUCH!:" $ lefthand.Touching[0]);
 	lefthand.changecolor(true);}
 	
-	if (thesixense.TheControllerData.controller[0].trigger>0)
+	if (thesixense.TheControllerData.controller[0].trigger>0 && lefthand.Touching[0].Class != class'whiteboardactor')
 		{
-		lefthand.Touching[0].SetPhysics(PHYS_none);
-		lefthand.Touching[0].SetLocation(lefthand.Touching[0].Location + leftposition_delta);
-		
 		getaxes(lefthand.Touching[0].Rotation, L_objx, L_objy, L_objz);
 	
-	//computing delta for object basis vectors
-	L_offsetx = resultx(left_old_transpose_x, left_old_transpose_y, left_old_transpose_z,L_objx);
-	L_offsety = resulty(left_old_transpose_x, left_old_transpose_y, left_old_transpose_z,L_objy);
-	L_offsetz = resultz(left_old_transpose_x, left_old_transpose_y, left_old_transpose_z,L_objz);
+		//computing delta for object basis vectors
+		L_offsetx = resultx(left_old_transpose_x, left_old_transpose_y, left_old_transpose_z,L_objx);
+		L_offsety = resulty(left_old_transpose_x, left_old_transpose_y, left_old_transpose_z,L_objy);
+		L_offsetz = resultz(left_old_transpose_x, left_old_transpose_y, left_old_transpose_z,L_objz);
 
-	L_offsetx = resultx(leftx_delta, lefty_delta, leftz_delta, L_offsetx);
-	L_offsety = resulty(leftx_delta, lefty_delta, leftz_delta, L_offsety);
-	L_offsetz = resultz(leftx_delta, lefty_delta, leftz_delta, L_offsetz);
+		L_offsetx = resultx(leftx_delta, lefty_delta, leftz_delta, L_offsetx);
+		L_offsety = resulty(leftx_delta, lefty_delta, leftz_delta, L_offsety);
+		L_offsetz = resultz(leftx_delta, lefty_delta, leftz_delta, L_offsetz);
 	
-	L_objx = L_objx+L_offsetx;
-	L_objy = L_objy+L_offsety;
-	L_objz = L_objz+L_offsetz;
+		L_objx = L_objx+L_offsetx;
+		L_objy = L_objy+L_offsety;
+		L_objz = L_objz+L_offsetz;
 
-	leftorientation_delta_world = orthorotation(L_objx, L_objy, L_objz);
+		leftorientation_delta_world = orthorotation(L_objx, L_objy, L_objz);
+		
+		moveobject(lefthand.Touching[0], leftposition_delta, leftorientation_delta_world);
 
-	lefthand.Touching[0].SetRotation(leftorientation_delta_world);
-	
+		/*lefthand.Touching[0].SetPhysics(PHYS_none);
+		lefthand.Touching[0].SetLocation(lefthand.Touching[0].Location + leftposition_delta);
+		lefthand.Touching[0].SetRotation(leftorientation_delta_world);
+		*/
 		bwastouchingL = true;
 		}
 
-	if (thesixense.TheControllerData.controller[0].trigger==0 && bwastouchingL)
+	if (thesixense.TheControllerData.controller[0].trigger==0 && bwastouchingL && lefthand.Touching[0].Class != class'whiteboardactor')
 		{lefthand.Touching[0].SetPhysics(PHYS_rigidbody);
 		bwastouchingL=false;
 		`log("release!");}
@@ -234,13 +280,12 @@ event PlayerTick( float DeltaTime )
 	lefthand.changecolor(false);}
 
 	//right hand
-	if (righthand.Touching[0] != none)
+	if (righthand.Touching[0] != none )
 	{`log("TOUCH!:" $ righthand.Touching[0]);
 	righthand.changecolor(true);
-		if (thesixense.TheControllerData.controller[1].trigger>0)
+		if (thesixense.TheControllerData.controller[1].trigger>0 && righthand.Touching[0].Class != class'whiteboardactor')
 		{
-		righthand.Touching[0].SetPhysics(PHYS_none);
-		righthand.Touching[0].SetLocation(righthand.Touching[0].Location + rightposition_delta);
+		
 		
 		getaxes(righthand.Touching[0].Rotation, R_objx, R_objy, R_objz);
 	
@@ -258,13 +303,17 @@ event PlayerTick( float DeltaTime )
 		R_objz = R_objz+R_offsetz;
 
 		rightorientation_delta_world = orthorotation(R_objx, R_objy, R_objz);
-
+		
+		/*righthand.Touching[0].SetPhysics(PHYS_none);
+		righthand.Touching[0].SetLocation(righthand.Touching[0].Location + rightposition_delta);
 		righthand.Touching[0].SetRotation(rightorientation_delta_world);
+		*/
 
+		moveobject(righthand.Touching[0], rightposition_delta, rightorientation_delta_world);
 
 		bwastouchingR = true;
 		}
-		if (thesixense.TheControllerData.controller[1].trigger==0 && bwastouchingR)
+		if (thesixense.TheControllerData.controller[1].trigger==0 && bwastouchingR && righthand.Touching[0].Class != class'whiteboardactor')
 		{righthand.Touching[0].SetPhysics(PHYS_rigidbody);
 		bwastouchingR=false;}
 	}
@@ -277,8 +326,38 @@ event PlayerTick( float DeltaTime )
 	getunaxes(leftorientation, left_old_transpose_x, left_old_transpose_y, left_old_transpose_z);
 	getunaxes(rightorientation, right_old_transpose_x, right_old_transpose_y, right_old_transpose_z);
 
+	
+	processarmandhead(); //move limbs in pawn
+
 
 //end touch and movement
+
+//whiteboard code
+	if (lefthand.Touching[0].Class == class'whiteboardactor' && thesixense.TheControllerData.controller[0].trigger>0)
+	{
+		if (whiteboard_count == 1)
+		{worldinfo.MyDecalManager.SpawnDecal(DecalMaterial'demo_asset.whiteboard_marker_decal', lefthand.Location,lefthand.Rotation,5,5,30,false,,,,,,,,500);
+		 whiteboard_count = 2;
+		}
+		else
+		{whiteboard_count = whiteboard_count + 1;
+		if (whiteboard_count == whiteboard_trigger)
+			whiteboard_count = 1;
+		}
+	}
+
+	if (righthand.Touching[0].Class == class'whiteboardactor' && thesixense.TheControllerData.controller[1].trigger>0)
+	{
+		if (whiteboard_count == 1)
+		{	worldinfo.MyDecalManager.SpawnDecal(DecalMaterial'demo_asset.whiteboard_marker_decal', righthand.Location,righthand.Rotation,5,5,30,false,,,,,,,,500);
+		whiteboard_count = 2;}
+		else
+		{whiteboard_count = whiteboard_count + 1;
+		if (whiteboard_count == whiteboard_trigger)
+			whiteboard_count = 1;
+		}
+	}
+//end whiteboard code
 
 // fiddle with spawning new objects
 
@@ -288,11 +367,11 @@ event PlayerTick( float DeltaTime )
 	if (thesixense.TheControllerData.controller[0].buttons == 64)
 		removefirstblocks();
 
-    if (thesixense.TheControllerData.controller[0].buttons == 8 && bjengapressed == false)
+ /*   if (thesixense.TheControllerData.controller[0].buttons == 8 && bjengapressed == false)
 		addjenga();
 
 	if (thesixense.TheControllerData.controller[0].buttons == 16)
-		removejengablocks();
+		removejengablocks();*/
 //end object creation and destruction
 
 	
@@ -324,15 +403,86 @@ event PlayerTick( float DeltaTime )
 	AdjustFOV(DeltaTime);
 }
 
+simulated event Destroyed()
+{
+	TheSixense.sixenseExit();
+	TheSixense = none;
+
+	if (LocalPlayer(Player) != None)
+	{
+		LocalPlayer(Player).ViewportClient.bDisableWorldRendering = false;
+	}
+
+	Super.Destroyed();
+}
+
+simulated function processarmandhead()
+{
+
+	local qpawn QP;
+	QP = Qpawn(pawn);
+		
+		QP.righthandrotation = QuatToRotator(TheSixense.altControllerData.Controller[1].Quat_rot);
+		QP.lefthandrotation = QuatToRotator(TheSixense.altControllerData.Controller[0].Quat_rot);
+		
+		QP.RightArmLocation = TheSixense.altControllerData.Controller[1].vector_Pos;
+		QP.LeftArmLocation = TheSixense.altControllerData.Controller[0].vector_Pos;
+		
+		if (which_player == 1)
+		{
+			QP.righthandrotation.Roll = qp.righthandrotation.roll - 32750;
+			qp.righthandrotation.Pitch = -qp.righthandrotation.Pitch+ 32750;
+			
+			qp.lefthandrotation.Roll = qp.lefthandrotation.Roll- 32750;
+			qp.lefthandrotation.pitch = -qp.lefthandrotation.pitch- 32750;
+			
+			
+			qp.RightArmLocation.X = -qp.RightArmLocation.X;
+			qp.RightArmLocation.Y = -qp.RightArmLocation.Y;
+			qp.LeftArmLocation.X = -qp.LeftArmLocation.X;
+			qp.LeftArmLocation.Y = -qp.LeftArmLocation.Y;
+		}
+
+		GetPlayerViewPoint(QP.headposition,QP.headrotation);
+
+		QP.ToggleBool();
+
+}
+
+
+simulated function moveobject(actor object_moved, vector position_delta, rotator rotation_delta)
+{
+	object_moved.SetPhysics(PHYS_none);
+	object_moved.SetLocation(object_moved.Location + position_delta);
+	object_moved.SetRotation(rotation_delta);
+	
+
+	if (role<role_authority)
+	{  
+		servermoveobject(object_moved, position_delta, rotation_delta);
+	}
+
+}
+
+reliable server function servermoveobject(actor s_object_moved, vector s_position_delta, rotator s_rotation_delta)
+{
+		
+		s_object_moved.SetPhysics(PHYS_none);
+		s_object_moved.SetLocation(s_object_moved.Location + s_position_delta);
+		s_object_moved.SetRotation(s_rotation_delta);
+}
+
+
 exec function addfirstblocks()
 {
 	local int i, j, k, blockindex;
 	
 	blockindex = 0;
 	
-	if (bjengapressed == true)
-		removejengablocks();
-
+	if (Role < Role_Authority)
+	{   serveraddfirstblocks(); }
+	else
+	{
 	for (k=0; k<=3; k++)
 		for (i=0; i<=2; i++)
 			for (j=0; j<=2; j++)
@@ -345,27 +495,54 @@ exec function addfirstblocks()
 					blockindex++;
 					}
 			}
-/*	if (bfirstblockpressed == false)
-	{pos_scale = 2*pos_scale;
-	base_dist.x = 1.5* base_dist.X;}
-*/
 
+	}
 	bfirstblockpressed = true;
+}
+
+reliable server function serveraddfirstblocks()
+{
+	local int i, j, k, blockindex;
+	
+	blockindex = 0;
+	
+	for (k=0; k<=3; k++)
+		for (i=0; i<=2; i++)
+			for (j=0; j<=2; j++)
+			{
+				spawnlocation.X = pawn.Location.X -150 + 75*(i+1);
+				spawnlocation.Y = pawn.Location.Y  + 75 + (j+1)*50;
+				spawnlocation.Z = pawn.Location.Z + 50*k;
+				if (randrange(0,1)>0.60)
+					{firstblock[blockindex] = spawn(class'firstblockactor',,,spawnlocation);
+					blockindex++;
+					}
+			}
 }
 
 exec function removefirstblocks()
 {
     local int destroyindex;
-	
+
+	if (role < role_authority)
+	{serverremovefirstblocks();}
+	else
+	{
 	for (destroyindex = 0; destroyindex <=firstblock.Length; destroyindex++) 
 			{firstblock[destroyindex].Destroy();}
-	
-	/*if (bfirstblockpressed ==true)
-	{pos_scale = pos_scale/2;
-		base_dist.x = base_dist.X/1.5;}
-	*/		
+	}
+		
 	bfirstblockpressed = false;
 	
+}
+
+reliable server function serverremovefirstblocks()
+{
+	 local int destroyindex;
+	
+	 for (destroyindex = 0; destroyindex <=firstblock.Length; destroyindex++) 
+			{firstblock[destroyindex].Destroy();}
+
 }
 
 function addjenga()
@@ -458,9 +635,9 @@ exec function call_sixense_cal()
 
 exec function spawn_mirror()
 {
-	spawnlocation.X = pawn.Location.X +50;
+	spawnlocation.X = pawn.Location.X +50 ;
 	spawnlocation.Y = pawn.Location.Y - 125;
-	spawnlocation.Z = pawn.Location.Z - 25;
+	spawnlocation.Z = pawn.Location.Z  -25;
 
 	spawnrotation.yaw = 0;
 	
@@ -485,10 +662,12 @@ exec function spawn_video()
 	
 	if (bvideo_spawned)
 	{	thevideo.Destroy();
-		bvideo_spawned = false;}
+		bvideo_spawned = false;
+		movie_texture_var.Pause();}
 	else
 	{   thevideo = spawn(class'videoactor',,,spawnlocation,spawnrotation);
-		bvideo_spawned = true;}
+		bvideo_spawned = true;
+		movie_texture_var.Play();}
 
 
 }
@@ -496,11 +675,11 @@ exec function spawn_video()
 exec function spawn_presentation()
 
 {
-	spawnlocation.X = pawn.Location.X + 150;
-	spawnlocation.Y = pawn.Location.Y -125;
+	spawnlocation.X = pawn.Location.X + 275;
+	spawnlocation.Y = pawn.Location.Y -50;
 	spawnlocation.Z = pawn.Location.Z;
 
-	spawnrotation.yaw = 8000;
+	spawnrotation.yaw = 13000;
 	//spawnrotation.pitch = 16000;
 	
 	if (bpresentation_spawned)
@@ -509,6 +688,24 @@ exec function spawn_presentation()
 	else
 	{   thepresentation = spawn(class'presentationactor',,,spawnlocation,spawnrotation);
 		bpresentation_spawned = true;}
+
+
+}
+
+exec function spawn_whiteboard()
+{
+	spawnlocation.X = pawn.Location.X + 25;
+	spawnlocation.Y = pawn.Location.Y - 125;
+	spawnlocation.Z = pawn.Location.Z + 25;
+
+	spawnrotation.yaw = 0;
+	
+	if (bwhiteboard_spawned)
+	{	thewhiteboard.Destroy();
+		bwhiteboard_spawned = false;}
+	else
+	{   thewhiteboard = spawn(class'whiteboardactor',,,spawnlocation,spawnrotation);
+		bwhiteboard_spawned = true;}
 
 
 }
@@ -556,6 +753,8 @@ DefaultProperties
 	bmirror_spawned = false;
 	bvideo_spawned = false;
 	bpresentation_spawned = false;
+	bwhiteboard_spawned = false;
+	bplayerchecked = false;
 //	bduck=1; //crouched?
 
 	movie_texture_var = TextureMovie'demo_asset.Wildlifemovie';
@@ -564,6 +763,9 @@ DefaultProperties
 	slideindex_row=0;
 	slideindex_column=0;
 	slideindex=1;
+
+	whiteboard_count = 1;
+	whiteboard_trigger = 5;
 
 
 }

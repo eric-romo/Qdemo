@@ -7,7 +7,34 @@ class QPawn extends UTPawn
 var QPlayerController ThePlayerController;
 var SkelControlSingleBone RightHand, LeftHand, head;
 var SkelControlLimb RightArm, LeftArm;
-//var bool bmeshsetyet;
+
+var repnotify vector RightArmLocation, LeftArmLocation, SocketLocation,  headposition;
+var repnotify bool blimbsmoving;
+var repnotify rotator righthandrotation, headrotation, lefthandrotation;
+
+
+
+replication
+	{
+		if (bnetdirty)
+			blimbsmoving, righthandrotation, rightarmlocation, socketlocation, LeftArmLocation, headposition, headrotation, lefthandrotation;
+	}
+
+simulated event ReplicatedEvent(name VarName)
+{
+    `log(VarName @ "replicated");
+    if (VarName == 'blimbsmoving')
+    {
+    	armsandheadmove();
+    	`log("armsmove replicated");
+    }
+    else
+    {
+    	//Super.ReplicatedEvent(VarName);
+    }
+
+	Super.ReplicatedEvent(VarName);
+}
 
 
 simulated function PostBeginPlay()
@@ -31,44 +58,45 @@ simulated event PostInitAnimTree(SkeletalMeshComponent SkelComp)
 {
 	super.PostInitAnimTree(SkelComp);
 	
-	//beta code for arm control
+	
+	if (skelcomp == mesh)
+	{
 	RightArm = SkelControlLimb(mesh.FindSkelControl('RightForeArm'));
 	LeftArm = SkelControlLimb(mesh.FindSkelControl('LeftForeArm'));
 
 	RightHand = SkelControlSingleBone(mesh.FindSkelControl('RightHand'));
 	LeftHand = SkelControlSingleBone(mesh.FindSkelControl('LeftHand'));
 	head = skelcontrolsinglebone(mesh.FindSkelControl('HeadControl'));
-
+	}
 }
 
 
 simulated event TickSpecial(float DeltaTime)
 {
-	//local rotator TempRotation;
-	local rotator headrotation;
-	local vector RightArmLocation, LeftArmLocation, SocketLocation, JointDirection, headposition;
+	
 	super.TickSpecial(DeltaTime);
+//	armsandheadmove();  //putting this in here seems to increase body movement...not sure if I want this
+
+}
+
+
+
+
+
+simulated function armsandheadmove()
+{
+	local vector jointdirection, jointdirectionL;
+
 
 	JointDirection = vect(-50,0,-50);
+	jointdirectionL = vect(-50,0,50);
 	
-	/*if (bmeshsetyet == false) //was used to make mesh visible to player - don't want this feature
-		{setmeshvisibility(true);
-		bmeshsetyet = true;}*/
-
-
-	if(ThePlayerController.TheSixense.calibrated)
-	{
-		
-		//TempRotation.Yaw = Rotation.Yaw;
-
-		RightHand.BoneRotation = QuatToRotator(ThePlayerController.TheSixense.altControllerData.Controller[1].Quat_rot);// + TempRotation;
-		LeftHand.BoneRotation = QuatToRotator(ThePlayerController.TheSixense.altControllerData.Controller[0].Quat_rot);// + TempRotation;
+		RightHand.BoneRotation = righthandrotation;
+		LeftHand.BoneRotation = lefthandrotation;
 		lefthand.BoneRotation.Roll = lefthand.BoneRotation.Roll + 32750;  //left hand axes are rotated 180deg
 
-		RightArmLocation = ThePlayerController.TheSixense.altControllerData.Controller[1].vector_Pos;// >> TempRotation;
-		LeftArmLocation = ThePlayerController.TheSixense.altControllerData.Controller[0].vector_Pos;// >> TempRotation;
-
 		if(bIsCrouched) RightArmLocation.Z -= CrouchHeight * 0.5;
+		
 		RightArm.EffectorLocation = RightArmLocation + Location;
 		Mesh.GetSocketWorldLocationAndRotation('WeaponPoint',SocketLocation);
 		RightArm.JointTargetLocation = TransformVectorByRotation(RightHand.BoneRotation, JointDirection) + SocketLocation;
@@ -76,24 +104,47 @@ simulated event TickSpecial(float DeltaTime)
 		if(bIsCrouched) LeftArmLocation.Z -= CrouchHeight * 0.5;
 		LeftArm.EffectorLocation = LeftArmLocation + Location;
 		Mesh.GetSocketWorldLocationAndRotation('DualWeaponPoint',SocketLocation);
-		LeftArm.JointTargetLocation = TransformVectorByRotation(LeftHand.BoneRotation, JointDirection) + SocketLocation;
-	
+		LeftArm.JointTargetLocation = TransformVectorByRotation(LeftHand.BoneRotation, JointDirectionL) + SocketLocation;			
 		
-
-	}
-		theplayercontroller.GetPlayerViewPoint(headposition,headrotation);
 		head.BoneRotation = headrotation - Rotation;
 
 }
 
 
+// this runs on the client that runs the command, as well as being called from the server function below
+simulated function ToggleBool()
+{
+    blimbsmoving = !blimbsmoving;
+    armsandheadmove();
+    if(Role < ROLE_Authority)
+        ServerToggleBool(rightarmlocation, socketlocation, righthandrotation, leftarmlocation, headposition, headrotation, lefthandrotation);
+	
+}
+
+// this is called on the server, and toggles it on the server side.  the replication code automatically handles sending it to everyone that
+// has a copy of this object
+reliable server function ServerToggleBool(vector s_RightArmLocation, vector s_SocketLocation, rotator s_righthandrotation, vector s_LeftArmLocation, vector s_headposition, rotator s_headrotation, rotator s_lefthandrotation)
+{
+    `log("Toggling bool!");
+    blimbsmoving = !blimbsmoving;
+	rightarmlocation = s_rightarmlocation;
+	socketlocation = s_socketlocation;
+	righthandrotation = s_righthandrotation;
+	leftarmlocation = s_leftarmlocation;
+	headposition = s_headposition;
+	headrotation = s_headrotation;
+	lefthandrotation = s_lefthandrotation;
+	armsandheadmove();
+}
+
 //end hydra arm motion code
+
 
 
 DefaultProperties
 {
 	
-
+	blimbsmoving = false
 	
 	bScriptTickSpecial = true
 	

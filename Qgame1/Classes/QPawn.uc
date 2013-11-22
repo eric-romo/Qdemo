@@ -88,12 +88,17 @@ simulated function armsandheadmove()
 	local vector jointdirection, jointdirectionL;
 
 
-	JointDirection = vect(-50,0,-50);
-	jointdirectionL = vect(-50,0,50);
+	//JointDirection = vect(-50,0,-50);  //uncomment for UDK skel
+	//jointdirectionL = vect(-50,0,50); //uncomment for UDK skel
+	jointdirectionL = vect(-50,0,-50);
+	JointDirection = vect(50,0,-50);
 	
 		RightHand.BoneRotation = righthandrotation;
 		LeftHand.BoneRotation = lefthandrotation;
-		lefthand.BoneRotation.Roll = lefthand.BoneRotation.Roll + 32750;  //left hand axes are rotated 180deg
+		//lefthand.BoneRotation.Roll = lefthand.BoneRotation.Roll + 32750;  //left hand axes are rotated 180deg //uncomment for UDK skel
+		righthand.BoneRotation.yaw = righthand.BoneRotation.yaw + 32750;    //remove for UDK skel
+		righthand.BoneRotation.roll = -righthand.BoneRotation.roll; //remove for UDK skel
+		righthand.BoneRotation.Pitch = -righthand.BoneRotation.Pitch;   //remove for UDK skel
 
 		if(bIsCrouched) RightArmLocation.Z -= CrouchHeight * 0.5;
 		
@@ -106,7 +111,13 @@ simulated function armsandheadmove()
 		Mesh.GetSocketWorldLocationAndRotation('DualWeaponPoint',SocketLocation);
 		LeftArm.JointTargetLocation = TransformVectorByRotation(LeftHand.BoneRotation, JointDirectionL) + SocketLocation;			
 		
-		head.BoneRotation = headrotation - Rotation;
+		//head.BoneRotation = headrotation - Rotation;
+		head.BoneRotation.Pitch = headrotation.Roll;
+		head.BoneRotation.Roll = -headrotation.Pitch;
+		head.BoneRotation.Yaw = headrotation.Yaw;
+
+		head.BoneRotation.Roll = head.BoneRotation.Roll +16375;
+		head.BoneRotation.Yaw = head.BoneRotation.Yaw - 16375;
 
 }
 
@@ -125,7 +136,7 @@ simulated function ToggleBool()
 // has a copy of this object
 reliable server function ServerToggleBool(vector s_RightArmLocation, vector s_SocketLocation, rotator s_righthandrotation, vector s_LeftArmLocation, vector s_headposition, rotator s_headrotation, rotator s_lefthandrotation)
 {
-    `log("Toggling bool!");
+  //  `log("Toggling bool!");
     blimbsmoving = !blimbsmoving;
 	rightarmlocation = s_rightarmlocation;
 	socketlocation = s_socketlocation;
@@ -139,7 +150,16 @@ reliable server function ServerToggleBool(vector s_RightArmLocation, vector s_So
 
 //end hydra arm motion code
 
-
+simulated event destroyed()
+{
+	super.destroyed();
+	
+	RightArm = none;
+	LeftArm = none;
+	RightHand = none;
+	LeftHand = none;
+	head = none;
+}
 
 DefaultProperties
 {
@@ -159,7 +179,8 @@ DefaultProperties
 	
 	Components.Remove(WPawnSkeletalMeshComponent)
 	Begin Object Name=WPawnSkeletalMeshComponent
-		AnimTreeTemplate=AnimTree'demo_asset.HX_FreeArms_3'  
+		AnimTreeTemplate=AnimTree'testpackage1.avatars.mixamo_animtree'
+		//AnimTreeTemplate=AnimTree'demo_asset.HX_FreeArms_3'  //uncomment for UDK skel
 		bCacheAnimSequenceNodes=FALSE
 		AlwaysLoadOnClient=true
 		AlwaysLoadOnServer=true
@@ -186,6 +207,7 @@ DefaultProperties
 	Mesh=WPawnSkeletalMeshComponent
 	Components.Add(WPawnSkeletalMeshComponent)
  
+	drawscale = 0.7
  
 	Begin Object Name=CollisionCylinder
 		CollisionRadius=+010.000000

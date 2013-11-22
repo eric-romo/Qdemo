@@ -10,7 +10,7 @@ Simulated Event PostBeginPlay() {
 simulated function changecolor(bool colorchoice)
 	{
 
-	
+		
 		if (colorchoice)
 		{staticmeshcomponent.SetMaterial(0,Material'ExampleMap_Resources.Translucent_Red');}
 
@@ -21,11 +21,18 @@ simulated function changecolor(bool colorchoice)
 	}
 
 
-event untouch(actor other)
+simulated event untouch(actor other)
 {
 	super.untouch(other);
 	if (other.Class != class'whiteboardactor')
 		other.SetPhysics(PHYS_rigidbody);
+	if (role<role_authority)
+		server_untouch(other);
+}
+
+reliable server function server_untouch(actor other)
+{
+	other.setphysics(PHYS_rigidbody);
 }
 
 defaultproperties

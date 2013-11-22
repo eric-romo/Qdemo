@@ -4,8 +4,8 @@ var LHandPawn LeftHand, RightHand;
 var vector SpawnLocation;
 var rotator spawnrotation;
 var vector LeftPosition, RightPosition,  Leftposition_old, Rightposition_old, leftposition_delta, rightposition_delta;
-var rotator LeftOrientation, RightOrientation, LeftOrientation_old, RightOrientation_old, leftorientation_delta, rightorientation_delta;
-var rotator leftorientation_delta_world, rightorientation_delta_world;
+var rotator LeftOrientation, RightOrientation;
+var rotator leftorientation_new_world, rightorientation_new_world;
 var sixense TheSixense;
 var Matrix sxMat;
 var vector leftx, lefty, leftz, L_objx, L_objy, L_objz, leftx_old, lefty_old, leftz_old, leftx_delta, lefty_delta, leftz_delta, L_offsetx, L_offsety, L_offsetz;
@@ -84,8 +84,7 @@ event PlayerTick( float DeltaTime )
 
 	Leftposition_old = leftposition;
 	Rightposition_old = rightposition;
-	Leftorientation_old = leftorientation;
-	Rightorientation_old = rightorientation;
+	
 
 	TheSixense.sixenseGetAllNewestData(TheSixense.TheControllerData);
 	
@@ -209,11 +208,9 @@ event PlayerTick( float DeltaTime )
 //calculate delta position and orientation
 
 	leftposition_delta = leftposition - leftposition_old;
-	leftorientation_delta = leftorientation - leftorientation_old;
-
-	rightposition_delta = rightposition - rightposition_old;
-	rightorientation_delta = rightorientation - rightorientation_old;
 	
+	rightposition_delta = rightposition - rightposition_old;
+		
 	leftx_old = leftx;
 	lefty_old = lefty;
 	leftz_old= leftz;
@@ -223,7 +220,7 @@ event PlayerTick( float DeltaTime )
 	leftx_delta = leftx - leftx_old;
 	lefty_delta = lefty - lefty_old;
 	leftz_delta = leftz - leftz_old;
-	
+
 	rightx_old = rightx;
 	righty_old = righty;
 	rightz_old= rightz;
@@ -237,14 +234,21 @@ event PlayerTick( float DeltaTime )
 	//touch detection
 
 	//left hand
-	if (lefthand.Touching[0] != none)
+	if (lefthand.Touching.length != 0)
 	{`log("TOUCH!:" $ lefthand.Touching[0]);
 	lefthand.changecolor(true);}
 	
+	if (lefthand.Touching.Length != 0)
+	{
 	if (thesixense.TheControllerData.controller[0].trigger>0 && lefthand.Touching[0].Class != class'whiteboardactor')
 		{
-		getaxes(lefthand.Touching[0].Rotation, L_objx, L_objy, L_objz);
-	
+			if (bwastouchingL)
+				lefthand.Touching[0].SetRotation(leftorientation_new_world);
+			
+			getaxes(lefthand.Touching[0].Rotation, L_objx, L_objy, L_objz);
+		
+		
+
 		//computing delta for object basis vectors
 		L_offsetx = resultx(left_old_transpose_x, left_old_transpose_y, left_old_transpose_z,L_objx);
 		L_offsety = resulty(left_old_transpose_x, left_old_transpose_y, left_old_transpose_z,L_objy);
@@ -253,39 +257,40 @@ event PlayerTick( float DeltaTime )
 		L_offsetx = resultx(leftx_delta, lefty_delta, leftz_delta, L_offsetx);
 		L_offsety = resulty(leftx_delta, lefty_delta, leftz_delta, L_offsety);
 		L_offsetz = resultz(leftx_delta, lefty_delta, leftz_delta, L_offsetz);
-	
+
 		L_objx = L_objx+L_offsetx;
 		L_objy = L_objy+L_offsety;
 		L_objz = L_objz+L_offsetz;
 
-		leftorientation_delta_world = orthorotation(L_objx, L_objy, L_objz);
-		
-		moveobject(lefthand.Touching[0], leftposition_delta, leftorientation_delta_world);
+		leftorientation_new_world = orthorotation(L_objx, L_objy, L_objz);
 
-		/*lefthand.Touching[0].SetPhysics(PHYS_none);
-		lefthand.Touching[0].SetLocation(lefthand.Touching[0].Location + leftposition_delta);
-		lefthand.Touching[0].SetRotation(leftorientation_delta_world);
-		*/
+		moveobject(lefthand.Touching[0], leftposition_delta, leftorientation_new_world);
+
 		bwastouchingL = true;
 		}
+	
 
 	if (thesixense.TheControllerData.controller[0].trigger==0 && bwastouchingL && lefthand.Touching[0].Class != class'whiteboardactor')
 		{lefthand.Touching[0].SetPhysics(PHYS_rigidbody);
 		bwastouchingL=false;
-		`log("release!");}
+		if (role<role_authority)
+			serversetphysics(lefthand.Touching[0]);
+		}
+	}
 
-
-	if (lefthand.Touching[0] == none)
-	{`log("NO TOUCH");
+	if (lefthand.touching.Length == 0)
+	{//`log("NO TOUCH");
 	lefthand.changecolor(false);}
 
 	//right hand
-	if (righthand.Touching[0] != none )
+	if (righthand.Touching.Length != 0 )
 	{`log("TOUCH!:" $ righthand.Touching[0]);
 	righthand.changecolor(true);
 		if (thesixense.TheControllerData.controller[1].trigger>0 && righthand.Touching[0].Class != class'whiteboardactor')
 		{
 		
+		if (bwastouchingR)
+			righthand.Touching[0].SetRotation(rightorientation_new_world);
 		
 		getaxes(righthand.Touching[0].Rotation, R_objx, R_objy, R_objz);
 	
@@ -302,25 +307,22 @@ event PlayerTick( float DeltaTime )
 		R_objy = R_objy+R_offsety;
 		R_objz = R_objz+R_offsetz;
 
-		rightorientation_delta_world = orthorotation(R_objx, R_objy, R_objz);
-		
-		/*righthand.Touching[0].SetPhysics(PHYS_none);
-		righthand.Touching[0].SetLocation(righthand.Touching[0].Location + rightposition_delta);
-		righthand.Touching[0].SetRotation(rightorientation_delta_world);
-		*/
+		rightorientation_new_world = orthorotation(R_objx, R_objy, R_objz);
 
-		moveobject(righthand.Touching[0], rightposition_delta, rightorientation_delta_world);
+		moveobject(righthand.Touching[0], rightposition_delta, rightorientation_new_world);
 
 		bwastouchingR = true;
 		}
 		if (thesixense.TheControllerData.controller[1].trigger==0 && bwastouchingR && righthand.Touching[0].Class != class'whiteboardactor')
 		{righthand.Touching[0].SetPhysics(PHYS_rigidbody);
-		bwastouchingR=false;}
+		bwastouchingR=false;
+		if (role<role_authority)
+			serversetphysics(righthand.Touching[0]);
+		}
 	}
 
-	if (righthand.Touching[0] == none)
-	{`log("NO TOUCH:" $ righthand.Touching[0]);
-	righthand.changecolor(false);}
+	if (righthand.Touching.Length ==0)
+	{righthand.changecolor(false);}
 
 
 	getunaxes(leftorientation, left_old_transpose_x, left_old_transpose_y, left_old_transpose_z);
@@ -333,6 +335,8 @@ event PlayerTick( float DeltaTime )
 //end touch and movement
 
 //whiteboard code
+	if (lefthand.Touching.Length != 0)
+	{
 	if (lefthand.Touching[0].Class == class'whiteboardactor' && thesixense.TheControllerData.controller[0].trigger>0)
 	{
 		if (whiteboard_count == 1)
@@ -345,7 +349,10 @@ event PlayerTick( float DeltaTime )
 			whiteboard_count = 1;
 		}
 	}
+	}
 
+	if (righthand.Touching.Length != 0)
+	{
 	if (righthand.Touching[0].Class == class'whiteboardactor' && thesixense.TheControllerData.controller[1].trigger>0)
 	{
 		if (whiteboard_count == 1)
@@ -356,6 +363,7 @@ event PlayerTick( float DeltaTime )
 		if (whiteboard_count == whiteboard_trigger)
 			whiteboard_count = 1;
 		}
+	}
 	}
 //end whiteboard code
 
@@ -452,26 +460,58 @@ simulated function processarmandhead()
 
 simulated function moveobject(actor object_moved, vector position_delta, rotator rotation_delta)
 {
+	local float changeinX, changeinY, changeinZ, rot_delta_roll, rot_delta_pitch, rot_delta_yaw;
+
+	changeinX = position_delta.X;
+	changeinY = position_delta.Y;
+	changeinZ = position_delta.Z;
+	rot_delta_roll = rotation_delta.Roll;
+	rot_delta_pitch = rotation_delta.pitch;
+	rot_delta_yaw = rotation_delta.yaw;
+	
 	object_moved.SetPhysics(PHYS_none);
 	object_moved.SetLocation(object_moved.Location + position_delta);
 	object_moved.SetRotation(rotation_delta);
-	
 
 	if (role<role_authority)
 	{  
-		servermoveobject(object_moved, position_delta, rotation_delta);
+	servermoveobject(object_moved, changeinX, changeinY, changeinZ);
+	serverrotobject(object_moved,rot_delta_roll, rot_delta_pitch, rot_delta_yaw);
 	}
-
+	
 }
 
-reliable server function servermoveobject(actor s_object_moved, vector s_position_delta, rotator s_rotation_delta)
+reliable server function servermoveobject(actor s_object_moved, float s_changeinX, float s_changeinY, float s_changeinZ)
 {
+	
+		local vector s_position_delta;
 		
+		s_position_delta.X = s_changeinX;
+		s_position_delta.Y = s_changeinY;
+		s_position_delta.Z = s_changeinZ;
+
 		s_object_moved.SetPhysics(PHYS_none);
 		s_object_moved.SetLocation(s_object_moved.Location + s_position_delta);
-		s_object_moved.SetRotation(s_rotation_delta);
+	
+		
 }
 
+reliable server function serverrotobject(actor s_object_moved, float s_rot_delta_roll, float s_rot_delta_pitch, float s_rot_delta_yaw)
+{
+	local rotator s_rotation_delta;
+
+	s_rotation_delta.Roll = s_rot_delta_roll;
+	s_rotation_delta.pitch = s_rot_delta_pitch;
+	s_rotation_delta.yaw = s_rot_delta_yaw;
+
+	s_object_moved.SetRotation(s_rotation_delta);
+
+}
+
+reliable server function serversetphysics(actor other)
+{
+	other.SetPhysics(PHYS_rigidbody);
+}
 
 exec function addfirstblocks()
 {
